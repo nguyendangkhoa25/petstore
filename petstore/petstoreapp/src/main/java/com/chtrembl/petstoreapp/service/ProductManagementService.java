@@ -65,7 +65,7 @@ public class ProductManagementService {
 
             log.info("Successfully retrieved {} products for category {} with tags {} [RequestID: {}, TraceID: {}]",
                     products.size(), category, tags, requestId, traceId);
-
+            this.sessionUser.getTelemetryClient().trackMetric("ReturningProductsCount", products.size());
             return products;
         } catch (FeignException fe) {
             log.error("Feign error retrieving products [RequestID: {}, TraceID: {}, Category: {}, HTTP: {}, Message: {}]",
