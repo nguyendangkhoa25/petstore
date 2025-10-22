@@ -19,6 +19,7 @@ import java.time.Duration;
 class OrderServiceHealthIndicator implements HealthIndicator {
 
     private final ContainerEnvironment containerEnvironment;
+    private final WebClient webClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
@@ -33,11 +34,9 @@ class OrderServiceHealthIndicator implements HealthIndicator {
             }
 
             // Call custom /health endpoint
-            String response = WebClient.builder()
-                    .baseUrl(baseUrl)
-                    .build()
+            String response = webClient
                     .get()
-                    .uri("/petstoreorderservice/v2/health")
+                    .uri(baseUrl + "/petstoreorderservice/v2/health")
                     .retrieve()
                     .bodyToMono(String.class)
                     .timeout(Duration.ofSeconds(5))
