@@ -52,6 +52,11 @@ public class ProductController extends BaseController {
                            @RequestParam(name = "category") String category,
                            @RequestParam(name = "id") int id) throws URISyntaxException {
 
+        //Intentional error for testing Application Insights
+        if ("error".equalsIgnoreCase(category)) {
+            throw new RuntimeException("Intentional error for testing Application Insights!");
+        }
+
         // Validate product category
         if (!isValidProductCategory(category)) {
             log.warn("Invalid product category requested: {}", category);
