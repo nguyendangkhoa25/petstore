@@ -6,6 +6,9 @@ petstore:
       url: ${PETSTOREPRODUCTSERVICE_URL:http://localhost:8082}
     order:
       url: ${PETSTOREORDERSERVICE_URL:http://localhost:8083}
+    reserveOrder:
+      url: ${RESERVEORDER_URL:http://localhost:8083}
+      code: ${RESERVEORDER_CODE:code123}
   security:
     # Enable in Module 10
     enabled: ${PETSTORE_SECURITY_ENABLED:false}
@@ -57,13 +60,17 @@ spring:
             authorization-grant-type: authorization_code
         provider:
           azure:
-            authorization-uri: https://${AZURE_TENANT_DOMAIN}.ciamlogin.com/${AZURE_TENANT_DOMAIN}.onmicrosoft.com/oauth2/v2.0/authorize
-            token-uri: https://${AZURE_TENANT_DOMAIN}.ciamlogin.com/${AZURE_TENANT_DOMAIN}.onmicrosoft.com/oauth2/v2.0/token
-            jwk-set-uri: https://${AZURE_TENANT_DOMAIN}.ciamlogin.com/${AZURE_TENANT_DOMAIN}.onmicrosoft.com/discovery/v2.0/keys
+#            authorization-uri: https://${AZURE_TENANT_DOMAIN}.ciamlogin.com/${AZURE_TENANT_DOMAIN}.onmicrosoft.com/oauth2/v2.0/authorize
+#            token-uri: https://${AZURE_TENANT_DOMAIN}.ciamlogin.com/${AZURE_TENANT_DOMAIN}.onmicrosoft.com/oauth2/v2.0/token
+#            jwk-set-uri: https://${AZURE_TENANT_DOMAIN}.ciamlogin.com/${AZURE_TENANT_DOMAIN}.onmicrosoft.com/discovery/v2.0/keys
+            authorization-uri: https://login.microsoftonline.com/${AZURE_TENANT_ID}/oauth2/v2.0/authorize
+            token-uri: https://login.microsoftonline.com/${AZURE_TENANT_ID}/oauth2/v2.0/token
+            jwk-set-uri: https://login.microsoftonline.com/${AZURE_TENANT_ID}/discovery/v2.0/keys
             user-name-attribute: sub
 logging:
   level:
     root: INFO
     com.chtrembl.petstoreapp: INFO
+    org.springframework.security: DEBUG
     com.azure.monitor.opentelemetry.autoconfigure.implementation.quickpulse.QuickPulsePingSender: ERROR
     com.azure.core.http.netty.NettyAsyncHttpClient: ERROR

@@ -1,6 +1,7 @@
 package com.chtrembl.petstoreapp.service;
 
 import com.chtrembl.petstoreapp.client.OrderServiceClient;
+import com.chtrembl.petstoreapp.client.ReserveOrderClient;
 import com.chtrembl.petstoreapp.exception.OrderServiceException;
 import com.chtrembl.petstoreapp.model.Order;
 import com.chtrembl.petstoreapp.model.Product;
@@ -12,7 +13,10 @@ import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.http.ResponseEntity;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,6 +34,9 @@ public class OrderManagementService {
 
     private final User sessionUser;
     private final OrderServiceClient orderServiceClient;
+    private final ReserveOrderClient reserveOrderClient;
+    @Value("${petstore.service.reserveOrder.code}")
+    private String reserveFunctionCode;
 
     public void updateOrder(long productId, int quantity, boolean completeOrder) {
         MDC.put(OPERATION, "updateOrder");
@@ -49,6 +56,9 @@ public class OrderManagementService {
             Order resultOrder = orderServiceClient.createOrUpdateOrder(orderJSON);
             log.info("Successfully updated order: {}", resultOrder);
 
+            log.info("Call Azure Function to reserve/upload order JSON");
+            String sessionId = this.sessionUser.getSessionId();
+            callReserveOrderFunction(resultOrder, sessionId);
         } catch (FeignException fe) {
             log.error("Unable to update order via Feign client: HTTP {} - {}", fe.status(), fe.getMessage(), fe);
             this.sessionUser.getTelemetryClient().trackException(fe);
@@ -59,6 +69,28 @@ public class OrderManagementService {
             throw new OrderServiceException("Unable to update order via order service", e);
         } finally {
             cleanupMDC();
+        }
+    }
+
+    @Async
+    protected void callReserveOrderFunction(Order order, String sessionId) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            String orderJson = mapper.writeValueAsString(order);
+            ResponseEntity<String> response = reserveOrderClient.reserveOrder(orderJson, sessionId, reserveFunctionCode);
+            if (response.getStatusCode().is2xxSuccessful()) {
+                log.info("✅ Order uploaded to Blob via Azure Function: {}", response.getBody());
+            } else {
+                log.warn("⚠️ Azure Function returned status {}: {}", response.getStatusCode(), response.getBody());
+            }
+        } catch (FeignException fe) {
+            log.error("Unable to update order via Feign client: HTTP {} - {}", fe.status(), fe.getMessage(), fe);
+            this.sessionUser.getTelemetryClient().trackException(fe);
+            throw new OrderServiceException("Unable to update order via order service", fe);
+        } catch (Exception e) {
+            log.error("Unexpected error updating order", e);
+            this.sessionUser.getTelemetryClient().trackException(e);
+            throw new OrderServiceException("Unable to update order via order service", e);
         }
     }
 
