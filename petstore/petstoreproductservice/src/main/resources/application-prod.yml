@@ -2,9 +2,9 @@ spring:
   application:
     name: petstoreproductservice
   datasource:
-    url: jdbc:postgresql://${PETSTORE_DB:localhost}:5432/productservice
-    username: ${PETSTORE_USERNAME:petstore}
-    password: ${PETSTORE_PASSWORD:123456}
+    url: jdbc:postgresql://${PETSTORE-DB:localhost}:5432/productservice
+    username: ${PETSTORE-USERNAME:petstore}
+    password: ${PETSTORE-PASSWORD:123456}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -13,6 +13,16 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+  cloud:
+    azure:
+      keyvault:
+        secret:
+          enabled: true
+          property-sources:
+            -   endpoint: ${AZURE_KEYVAULT_URI}
+                credential:
+                  managed-identity-enabled: true
+          property-source-enabled: true
 
 server:
   port: ${PETSTOREPRODUCTSERVICE_SERVER_PORT:8080}
