@@ -7,5 +7,21 @@
     "id": "Microsoft.Azure.Functions.ExtensionBundle",
     "version": "[4.*, 5.2.0)"
   },
-  "functionTimeout": "00:10:00"
+  "functionTimeout": "00:10:00",
+  "extensions": {
+    "serviceBus": {
+      "prefetchCount": 100,
+      "maxConcurrentCalls": 32,
+      "autoCompleteMessages": true,
+      "maxAutoLockRenewalDuration": "00:05:00",
+      "maxDeliveryCount": 3
+    }
+  },
+  "logging": {
+    "logLevel": {
+      "default": "Information",
+      "Function": "Information",
+      "Host": "Information"
+    }
+  }
 }

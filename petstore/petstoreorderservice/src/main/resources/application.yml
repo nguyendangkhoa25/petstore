@@ -1,6 +1,14 @@
 spring:
   application:
     name: petstoreorderservice
+  cloud:
+    azure:
+      servicebus:
+        enabled: ${AZURE_SERVICEBUS_ENABLED:false}
+        connection-string: ${AZURE_SERVICEBUS_CONNECTION_STRING}
+        queue:
+          name: ${AZURE_SERVICEBUS_QUEUE_NAME:order-updates}
+
 server:
   port: ${PETSTOREORDERSERVICE_SERVER_PORT:8080}
 

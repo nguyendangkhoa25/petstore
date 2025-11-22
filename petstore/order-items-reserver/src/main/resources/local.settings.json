@@ -4,6 +4,10 @@
     "AzureWebJobsStorage": "",
     "FUNCTIONS_WORKER_RUNTIME": "java",
     "FUNCTIONS_EXTENSION_VERSION": "~4",
-    "AzureWebJobsDashboard": ""
+    "AzureWebJobsDashboard": "",
+    "SERVICEBUS_CONNECTION_STRING": "<your-service-bus-connection-string>",
+    "SERVICEBUS_QUEUE_NAME": "order-updates",
+    "BLOB_CONNECTION_STRING": "<your-blob-storage-connection-string>",
+    "BLOB_CONTAINER_NAME": "order-requests"
   }
 }

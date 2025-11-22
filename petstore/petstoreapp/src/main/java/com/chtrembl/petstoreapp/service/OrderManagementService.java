@@ -56,9 +56,9 @@ public class OrderManagementService {
             Order resultOrder = orderServiceClient.createOrUpdateOrder(orderJSON);
             log.info("Successfully updated order: {}", resultOrder);
 
-            log.info("Call Azure Function to reserve/upload order JSON");
-            String sessionId = this.sessionUser.getSessionId();
-            callReserveOrderFunction(resultOrder, sessionId);
+            //log.info("Call Azure Function to reserve/upload order JSON");
+            //String sessionId = this.sessionUser.getSessionId();
+            //callReserveOrderFunction(resultOrder, sessionId);
         } catch (FeignException fe) {
             log.error("Unable to update order via Feign client: HTTP {} - {}", fe.status(), fe.getMessage(), fe);
             this.sessionUser.getTelemetryClient().trackException(fe);

@@ -1,0 +1,167 @@
+{
+  "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "$connections": {
+      "defaultValue": {},
+      "type": "Object"
+    },
+    "managerEmail": {
+      "defaultValue": "manager@example.com",
+      "type": "String"
+    }
+  },
+  "triggers": {
+    "When_messages_are_available_in_a_dead-letter_queue": {
+      "type": "ApiConnection",
+      "inputs": {
+        "host": {
+          "connection": {
+            "name": "@parameters('$connections')['servicebus']['connectionId']"
+          }
+        },
+        "method": "get",
+        "path": "/@{encodeURIComponent(encodeURIComponent('order-updates'))}/messages/deadletter/head",
+        "queries": {
+          "queueType": "Main"
+        }
+      },
+      "recurrence": {
+        "frequency": "Minute",
+        "interval": 5
+      }
+    }
+  },
+  "actions": {
+    "Parse_Dead_Letter_Message": {
+      "type": "ParseJson",
+      "inputs": {
+        "content": "@triggerBody()?['ContentData']",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "sessionId": {
+              "type": "string"
+            },
+            "orderId": {
+              "type": "string"
+            },
+            "email": {
+              "type": "string"
+            },
+            "products": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "quantity": {
+                    "type": "integer"
+                  },
+                  "photoURL": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "timestamp": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "runAfter": {}
+    },
+    "Get_Dead_Letter_Properties": {
+      "type": "Compose",
+      "inputs": {
+        "DeadLetterReason": "@triggerBody()?['DeadLetterReason']",
+        "DeadLetterErrorDescription": "@triggerBody()?['DeadLetterErrorDescription']",
+        "DeliveryCount": "@triggerBody()?['DeliveryCount']",
+        "EnqueuedTimeUtc": "@triggerBody()?['EnqueuedTimeUtc']",
+        "MessageId": "@triggerBody()?['MessageId']"
+      },
+      "runAfter": {
+        "Parse_Dead_Letter_Message": [
+          "Succeeded"
+        ]
+      }
+    },
+    "Create_HTML_Table_for_Products": {
+      "type": "Table",
+      "inputs": {
+        "from": "@body('Parse_Dead_Letter_Message')?['products']",
+        "format": "HTML",
+        "columns": [
+          {
+            "header": "Product ID",
+            "value": "@item()?['id']"
+          },
+          {
+            "header": "Product Name",
+            "value": "@item()?['name']"
+          },
+          {
+            "header": "Quantity",
+            "value": "@item()?['quantity']"
+          }
+        ]
+      },
+      "runAfter": {
+        "Get_Dead_Letter_Properties": [
+          "Succeeded"
+        ]
+      }
+    },
+    "Send_Email_Notification": {
+      "type": "ApiConnection",
+      "inputs": {
+        "host": {
+          "connection": {
+            "name": "@parameters('$connections')['office365']['connectionId']"
+          }
+        },
+        "method": "post",
+        "path": "/v2/Mail",
+        "body": {
+          "To": "@parameters('managerEmail')",
+          "Subject": "URGENT: Failed Order Upload - Manual Processing Required",
+          "Body": "<html>\n<head>\n<style>\ntable { border-collapse: collapse; width: 100%; }\nth, td { border: 1px solid #ddd; padding: 8px; text-align: left; }\nth { background-color: #4CAF50; color: white; }\ntr:nth-child(even) { background-color: #f2f2f2; }\n.error { color: red; font-weight: bold; }\n.info { background-color: #f0f0f0; padding: 10px; margin: 10px 0; }\n</style>\n</head>\n<body>\n<h2 class=\"error\">⚠️ FAILED ORDER UPLOAD ALERT</h2>\n<p>An order failed to upload to blob storage after 3 retry attempts and has been moved to the Dead-Letter Queue.</p>\n\n<div class=\"info\">\n<h3>Order Details:</h3>\n<ul>\n<li><strong>Session ID:</strong> @{body('Parse_Dead_Letter_Message')?['sessionId']}</li>\n<li><strong>Order ID:</strong> @{body('Parse_Dead_Letter_Message')?['orderId']}</li>\n<li><strong>Customer Email:</strong> @{body('Parse_Dead_Letter_Message')?['email']}</li>\n<li><strong>Timestamp:</strong> @{body('Parse_Dead_Letter_Message')?['timestamp']}</li>\n</ul>\n</div>\n\n<div class=\"info\">\n<h3>Dead-Letter Queue Information:</h3>\n<ul>\n<li><strong>Dead-Letter Reason:</strong> @{outputs('Get_Dead_Letter_Properties')?['DeadLetterReason']}</li>\n<li><strong>Error Description:</strong> @{outputs('Get_Dead_Letter_Properties')?['DeadLetterErrorDescription']}</li>\n<li><strong>Delivery Attempts:</strong> @{outputs('Get_Dead_Letter_Properties')?['DeliveryCount']}</li>\n<li><strong>Message ID:</strong> @{outputs('Get_Dead_Letter_Properties')?['MessageId']}</li>\n<li><strong>Enqueued Time:</strong> @{outputs('Get_Dead_Letter_Properties')?['EnqueuedTimeUtc']}</li>\n</ul>\n</div>\n\n<h3>Products in Order:</h3>\n@{body('Create_HTML_Table_for_Products')}\n\n<div class=\"info\">\n<h3>Required Action:</h3>\n<p>This order requires manual processing. Please:</p>\n<ol>\n<li>Review the error details above</li>\n<li>Verify the blob storage availability and configuration</li>\n<li>Manually create the order file if necessary</li>\n<li>Contact the customer if order cannot be processed</li>\n<li>Complete the dead-letter message in Service Bus after handling</li>\n</ol>\n</div>\n\n<p><small>This is an automated notification from the PetStore Order Items Reserver service.</small></p>\n</body>\n</html>",
+          "Importance": "High"
+        }
+      },
+      "runAfter": {
+        "Create_HTML_Table_for_Products": [
+          "Succeeded"
+        ]
+      }
+    },
+    "Complete_Dead_Letter_Message": {
+      "type": "ApiConnection",
+      "inputs": {
+        "host": {
+          "connection": {
+            "name": "@parameters('$connections')['servicebus']['connectionId']"
+          }
+        },
+        "method": "delete",
+        "path": "/@{encodeURIComponent(encodeURIComponent('order-updates'))}/messages/deadletter/complete",
+        "queries": {
+          "queueType": "Main",
+          "lockToken": "@triggerBody()?['LockToken']"
+        }
+      },
+      "runAfter": {
+        "Send_Email_Notification": [
+          "Succeeded"
+        ]
+      }
+    }
+  },
+  "outputs": {}
+}

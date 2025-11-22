@@ -18,9 +18,15 @@ import java.util.List;
 public class OrderRequest {
 
     public String sessionId;
-    @JsonProperty("id")
+    
+    @JsonProperty("orderId")
+    @JsonAlias("id")
     public String orderId;
-    public String userId;
+    
+    @JsonProperty("email")
+    @JsonAlias("userId")
+    public String email;
+    
     public OffsetDateTime timestamp;
 
     @JsonProperty("products")
